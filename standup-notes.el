@@ -25,6 +25,16 @@
 
 ;;; Code:
 
+(defvar standup-template-alist '((previous . ("Non-development work" "Tickets"))
+                                 (current  . ("Non-development work" "Tickets" "PRs" "PRs wanted"))
+                                 (next     . ("Tickets"))
+                                 (blockers . ("Do you have any blockers?"))
+                                 (meetings . ("Do you need to meet with anyone?")))
+  "The template to be used when generating standup-notes.
+  The standup template contains template tasks for the keys
+  PREVIOUS, CURRENT and NEXT. Override by binding this to a new
+  value")
+
 (defun standup-notes ()
   "Generate standup-notes interactively. The user will be
 prompted to enter various information for the previous and
@@ -35,9 +45,7 @@ generated in a help buffer. "
       ((was-fridayp
         (lambda ()
           (let ((today (format-time-string "%u")))
-            (or (equal today "0")
-                (equal today "1")
-                (equal today "7")))))
+            (member today '("0" "1" "7")))))
 
        (prev-workday-abbv
         (lambda ()
@@ -53,7 +61,7 @@ generated in a help buffer. "
                                     nil nil "no")))
             (if (equal input "no")
                 ""
-              (concat input "\n")))))
+              input))))
 
        (prompt-todos
         (lambda (todos)
@@ -66,25 +74,41 @@ generated in a help buffer. "
                   (funcall prompt-todos
                            (concat subject
                                    " for "
-                                   (funcall prev-workday-full))) "\n")))
-
+                                   (funcall prev-workday-full))))))
        (prompt-current
         (lambda (subject)
           (concat "T: " subject ": "
-                  (funcall prompt-todos (concat subject " for today")) "\n"))))
+                  (funcall prompt-todos (concat subject " for today")))))
 
-    ;; TODO: Add support for standup templates. Currently only a fixed
-    ;; number of tasks are supported.
+       (prompt-next
+        (lambda (subject)
+          (concat "Next: " subject ": "
+                  (funcall prompt-todos (concat subject " for tomorrow")))))
+
+       (join-newline
+        (lambda (lst)
+          (mapconcat 'identity lst "\n")))
+
+       (make-prompt
+        (lambda (type task)
+          (case type
+            ('previous (funcall prompt-previous task))
+            ('current  (funcall prompt-current task))
+            ('next     (funcall prompt-next task))
+            (t         (funcall prompt-question task)))))
+
+       (make-from-template
+        (lambda ()
+          (cl-loop for (header . tasks) in standup-template-alist
+                   collect
+                   (funcall join-newline
+                            (cl-loop for task in tasks
+                                     collect
+                                     (funcall make-prompt header task)))))))
+
     (with-help-window "*standup-notes*"
       (princ
-       (concat (funcall prompt-previous "Non-development work")
-               (funcall prompt-previous "Tickets")
-               (funcall prompt-current  "Non-development work")
-               (funcall prompt-current  "Tickets")
-               (funcall prompt-current  "PR reviews")
-               (funcall prompt-current  "PR reviews needed")
-               (funcall prompt-question "Do you have any blockers?")
-               (funcall prompt-question "Do you need to talk to anyone?"))))))
+       (funcall join-newline (funcall make-from-template))))))
 
 (provide 'standup-notes)
 ;;; standup-notes.el ends here
