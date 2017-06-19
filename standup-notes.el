@@ -49,11 +49,11 @@ generated in a help buffer. "
 
        (beginning-of-weekp
         (lambda ()
-          (member (day-of-week) '("0" "1" "7"))))
+          (member (funcall day-of-week) '("0" "1" "7"))))
 
        (end-of-weekp
         (lambda ()
-          (member (day-of-week) '("1" "6" "7"))))
+          (member (funcall day-of-week) '("1" "6" "7"))))
 
        (prev-workday-abbv
         (lambda ()
