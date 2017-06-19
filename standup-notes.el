@@ -26,7 +26,7 @@
 ;;; Code:
 
 (defvar standup-template-alist '((previous . ("Non-development work" "Tickets"))
-                                 (current  . ("Non-development work" "Tickets" "PRs" "PRs wanted"))
+                                 (current  . ("Non-development work" "Tickets" "PRs to review" "PRs needed"))
                                  (next     . ("Tickets"))
                                  (blockers . ("Do you have any blockers?"))
                                  (meetings . ("Do you need to meet with anyone?")))
@@ -41,19 +41,37 @@ prompted to enter various information for the previous and
 current work days, and a nicely formatted report will be
 generated in a help buffer. "
   (interactive)
+
   (letrec
-      ((was-fridayp
+      ((day-of-week
         (lambda ()
-          (let ((today (format-time-string "%u")))
-            (member today '("0" "1" "7")))))
+          (format-time-string "%u")))
+
+       (beginning-of-weekp
+        (lambda ()
+          (member (day-of-week) '("0" "1" "7"))))
+
+       (end-of-weekp
+        (lambda ()
+          (member (day-of-week) '("1" "6" "7"))))
 
        (prev-workday-abbv
         (lambda ()
-          (if (funcall was-fridayp) "F" "Y")))
+          (if (funcall beginning-of-weekp)
+              "F"
+            "Y")))
 
-       (prev-workday-full
+       (prev-workday
         (lambda ()
-          (if (funcall was-fridayp) "Friday" "yesterday")))
+          (if (funcall beginning-of-weekp)
+              "Friday"
+            "yesterday")))
+
+       (next-workday
+        (lambda ()
+          (if (funcall end-of-weekp)
+              "Monday"
+            "tomorrow")))
 
        (prompt-question
         (lambda (question)
@@ -74,7 +92,7 @@ generated in a help buffer. "
                   (funcall prompt-todos
                            (concat subject
                                    " for "
-                                   (funcall prev-workday-full))))))
+                                   (funcall prev-workday))))))
        (prompt-current
         (lambda (subject)
           (concat "T: " subject ": "
@@ -83,7 +101,10 @@ generated in a help buffer. "
        (prompt-next
         (lambda (subject)
           (concat "Next: " subject ": "
-                  (funcall prompt-todos (concat subject " for tomorrow")))))
+                  (funcall prompt-todos
+                           (concat subject
+                                   " for "
+                                   (funcall next-workday))))))
 
        (join-newline
         (lambda (lst)
