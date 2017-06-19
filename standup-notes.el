@@ -53,7 +53,7 @@ generated in a help buffer. "
 
        (end-of-weekp
         (lambda ()
-          (member (funcall day-of-week) '("1" "6" "7"))))
+          (member (funcall day-of-week) '("0" "6" "7"))))
 
        (prev-workday-abbv
         (lambda ()
