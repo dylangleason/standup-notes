@@ -29,7 +29,7 @@
                                  (current  . ("Non-development work" "Tickets" "PRs to review" "PRs needed"))
                                  (next     . ("Tickets"))
                                  (blockers . ("Do you have any blockers?"))
-                                 (meetings . ("Do you need to meet with anyone?")))
+                                 (notes    . ("Do you need to meet with anyone?")))
   "The template to be used when generating standup-notes.
   The standup template contains template tasks for the keys
   PREVIOUS, CURRENT and NEXT. Override by binding this to a new
@@ -39,7 +39,7 @@
   "Generate standup-notes interactively. The user will be
 prompted to enter various information for the previous and
 current work days, and a nicely formatted report will be
-generated in a help buffer. "
+generated in a help buffer."
   (interactive)
 
   (letrec
@@ -55,12 +55,6 @@ generated in a help buffer. "
         (lambda ()
           (member (funcall day-of-week) '("0" "6" "7"))))
 
-       (prev-workday-abbv
-        (lambda ()
-          (if (funcall beginning-of-weekp)
-              "F"
-            "Y")))
-
        (prev-workday
         (lambda ()
           (if (funcall beginning-of-weekp)
@@ -73,59 +67,70 @@ generated in a help buffer. "
               "Monday"
             "tomorrow")))
 
-       (prompt-question
-        (lambda (question)
-          (let ((input (read-string (concat question " (Defaults to \"no\"): ")
+       (prompt-notes
+        (lambda (notes)
+          (let ((input (read-string (concat notes " (Defaults to \"no\"): ")
                                     nil nil "no")))
             (if (equal input "no")
-                ""
+                "No additional notes to add."
               input))))
 
-       (prompt-todos
-        (lambda (todos)
+       (prompt-items
+        (lambda (items)
           (read-string
-           (concat todos " (Defaults to \"none\"): ") nil nil "none")))
+           (concat items " (Defaults to \"none\"): ") nil nil "none")))
 
        (prompt-previous
         (lambda (subject)
-          (concat (funcall prev-workday-abbv) ": " subject ": "
-                  (funcall prompt-todos
+          (concat subject ": "
+                  (funcall prompt-items
                            (concat subject
                                    " for "
                                    (funcall prev-workday))))))
        (prompt-current
         (lambda (subject)
-          (concat "T: " subject ": "
-                  (funcall prompt-todos (concat subject " for today")))))
+          (concat subject ": "
+                  (funcall prompt-items (concat subject " for today")))))
 
        (prompt-next
         (lambda (subject)
-          (concat "Next: " subject ": "
-                  (funcall prompt-todos
+          (concat subject ": "
+                  (funcall prompt-items
                            (concat subject
                                    " for "
                                    (funcall next-workday))))))
 
        (join-newline
         (lambda (lst)
-          (mapconcat 'identity lst "\n")))
+          (string-trim (mapconcat 'identity lst "\n"))))
 
        (make-prompt
-        (lambda (type task)
+        (lambda (type item)
           (case type
-            ('previous (funcall prompt-previous task))
-            ('current  (funcall prompt-current task))
-            ('next     (funcall prompt-next task))
-            (t         (funcall prompt-question task)))))
+            ('previous (funcall prompt-previous item))
+            ('current  (funcall prompt-current item))
+            ('next     (funcall prompt-next item))
+            ('blockers (funcall prompt-items item))
+            (t         (funcall prompt-notes item)))))
+
+       (make-header
+        (lambda (header)
+          (case header
+            ('previous (funcall prev-workday))
+            ('current  "today")
+            ('next     (funcall next-workday))
+            ('blockers "blockers")
+            (t         "notes"))))
 
        (make-from-template
         (lambda ()
           (cl-loop for (header . tasks) in standup-template-alist
                    collect
-                   (funcall join-newline
-                            (cl-loop for task in tasks
-                                     collect
-                                     (funcall make-prompt header task)))))))
+                   (concat "\n## " (upcase (funcall make-header header)) "\n"
+                           (funcall join-newline
+                                    (cl-loop for task in tasks
+                                             collect
+                                             (funcall make-prompt header task))))))))
 
     (with-help-window "*standup-notes*"
       (princ
