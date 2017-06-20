@@ -1,5 +1,5 @@
 ;;; standup-notes.el --- Interactive standup-note generator  -*- lexical-binding: t; -*-
-n
+
 ;; Copyright (C) 2017  Dylan Gleason
 
 ;; Author: Dylan Gleason <dgleason8384@gmail.com>
