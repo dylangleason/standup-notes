@@ -104,6 +104,13 @@ generated in a help buffer."
         (lambda (lst)
           (string-trim (mapconcat 'identity lst "\n"))))
 
+       (prompt-slackify
+        (lambda (str)
+          (let ((input (funcall prompt-notes "Create slack friendly output?")))
+            (if (equal input "")
+                str
+                (concat "```\n" str "\n```")))))
+
        (make-prompt
         (lambda (type item)
           (case type
@@ -139,7 +146,8 @@ generated in a help buffer."
 
     (with-help-window "*standup-notes*"
       (princ
-       (funcall join-newline (funcall make-from-template))))))
+       (funcall prompt-slackify
+                (funcall join-newline (funcall make-from-template)))))))
 
 (provide 'standup-notes)
 ;;; standup-notes.el ends here
