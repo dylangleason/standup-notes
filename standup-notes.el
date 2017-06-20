@@ -1,5 +1,5 @@
 ;;; standup-notes.el --- Interactive standup-note generator  -*- lexical-binding: t; -*-
-
+n
 ;; Copyright (C) 2017  Dylan Gleason
 
 ;; Author: Dylan Gleason <dgleason8384@gmail.com>
@@ -72,7 +72,7 @@ generated in a help buffer."
           (let ((input (read-string (concat notes " (Defaults to \"no\"): ")
                                     nil nil "no")))
             (if (equal input "no")
-                "No additional notes to add."
+                ""
               input))))
 
        (prompt-items
@@ -110,7 +110,7 @@ generated in a help buffer."
             ('previous (funcall prompt-previous item))
             ('current  (funcall prompt-current item))
             ('next     (funcall prompt-next item))
-            ('blockers (funcall prompt-items item))
+            ('blockers (funcall prompt-notes item))
             (t         (funcall prompt-notes item)))))
 
        (make-header
@@ -122,15 +122,20 @@ generated in a help buffer."
             ('blockers "blockers")
             (t         "notes"))))
 
+       (make-item
+        (lambda (header tasks)
+          (let ((str (funcall join-newline
+                              (cl-loop for task in tasks
+                                       collect
+                                       (funcall make-prompt header task)))))
+            (if (equal "" str)
+                str
+              (concat "\n## " (upcase (funcall make-header header)) "\n" str)))))
+
        (make-from-template
         (lambda ()
           (cl-loop for (header . tasks) in standup-template-alist
-                   collect
-                   (concat "\n## " (upcase (funcall make-header header)) "\n"
-                           (funcall join-newline
-                                    (cl-loop for task in tasks
-                                             collect
-                                             (funcall make-prompt header task))))))))
+                   collect (funcall make-item header tasks)))))
 
     (with-help-window "*standup-notes*"
       (princ
