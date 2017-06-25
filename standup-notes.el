@@ -69,36 +69,40 @@ generated in a help buffer."
 
        (prompt-notes
         (lambda (notes)
-          (let ((input (read-string (concat notes " (Defaults to \"no\"): ")
+          (let ((input (read-string (format "%s (Defaults to \"no\"): " notes)
                                     nil nil "no")))
-            (if (equal input "no")
+            (if (string-equal input "no")
                 ""
               input))))
 
        (prompt-items
         (lambda (items)
           (read-string
-           (concat items " (Defaults to \"none\"): ") nil nil "none")))
+           (format "%s (Defaults to \"none\"): " items) nil nil "none")))
+
+       (format-prompt
+        (lambda (subject response)
+          (format "%s: %s" subject response)))
 
        (prompt-previous
         (lambda (subject)
-          (concat subject ": "
-                  (funcall prompt-items
-                           (concat subject
-                                   " for "
-                                   (funcall prev-workday))))))
+          (funcall format-prompt
+           subject
+           (funcall prompt-items
+                    (format "%s for %s" subject (funcall prev-workday))))))
+
        (prompt-current
         (lambda (subject)
-          (concat subject ": "
-                  (funcall prompt-items (concat subject " for today")))))
+          (funcall format-prompt
+           subject
+           (funcall prompt-items (format "%s for today" subject)))))
 
        (prompt-next
         (lambda (subject)
-          (concat subject ": "
-                  (funcall prompt-items
-                           (concat subject
-                                   " for "
-                                   (funcall next-workday))))))
+          (funcall format-prompt
+           subject
+           (funcall prompt-items
+                    (format "%s for %s" subject (funcall next-workday))))))
 
        (join-newline
         (lambda (lst)
@@ -107,9 +111,9 @@ generated in a help buffer."
        (prompt-slackify
         (lambda (str)
           (let ((input (funcall prompt-notes "Create slack friendly output?")))
-            (if (equal input "")
+            (if (string-equal input "")
                 str
-                (concat "```\n" str "\n```")))))
+              (format "```\n%s\n```" str)))))
 
        (make-prompt
         (lambda (type item)
@@ -129,25 +133,31 @@ generated in a help buffer."
             ('blockers "blockers")
             (t         "notes"))))
 
-       (make-item
+       (make-tasks
         (lambda (header tasks)
-          (let ((str (funcall join-newline
-                              (cl-loop for task in tasks
-                                       collect
-                                       (funcall make-prompt header task)))))
-            (if (equal "" str)
-                str
-              (concat "\n## " (upcase (funcall make-header header)) "\n" str)))))
+          (let ((append-to ""))
+            (dolist (task tasks)
+              (setq append-to
+                    (format
+                     "%s%s\n" append-to (funcall make-prompt header task))))
+            (string-trim append-to))))
 
-       (make-from-template
+       (make-day
+        (lambda (header tasks)
+          (let ((str (funcall make-tasks header tasks)))
+            (if (string-equal "" str)
+                str
+              (format "\n## %s\n%s" (upcase (funcall make-header header)) str)))))
+
+       (make-standup
         (lambda ()
           (cl-loop for (header . tasks) in standup-template-alist
-                   collect (funcall make-item header tasks)))))
+                   collect (funcall make-day header tasks)))))
 
     (with-help-window "*standup-notes*"
       (princ
        (funcall prompt-slackify
-                (funcall join-newline (funcall make-from-template)))))))
+                (funcall join-newline (funcall make-standup)))))))
 
 (provide 'standup-notes)
 ;;; standup-notes.el ends here
