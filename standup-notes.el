@@ -54,11 +54,13 @@ week, otherwise NIL"
   (member (standup-notes--day-of-week) '("5" "6" "7")))
 
 (defun standup-notes--prev-work-day ()
+  "Returns a string indicating the previous workday"
   (if (standup-notes--beginning-of-week-p)
       "Friday"
     "yesterday"))
 
 (defun standup-notes--next-work-day ()
+  "Returns a string indicating the next workday"
   (if (standup-notes--end-of-week-p)
       "Monday"
     "tomorrow"))
@@ -113,16 +115,17 @@ or (task) for that TYPE."
     (t         "notes")))
 
 (defun standup-notes--make-tasks (header tasks)
-  "Return a string for grouped TASKS under the specified HEADER
-name. "
-  (let ((str (funcall (lambda ()
-                        (let ((append-to ""))
-                          (dolist (task tasks)
-                            (setq append-to
-                                  (format "%s%s\n"
-                                          append-to
-                                          (standup-notes--make-prompt header task))))
-                          (string-trim append-to))))))
+  "Return a string showing grouped TASKS under a specified HEADER
+name."
+  (let ((str (funcall
+              (lambda ()
+                (let ((append-to ""))
+                  (dolist (task tasks)
+                    (setq append-to
+                          (concat append-to
+                                  (standup-notes--make-prompt header task)
+                                  "\n")))
+                  (string-trim append-to))))))
     (if (string= "" str)
         str
       (format "\n## %s\n%s"
@@ -137,9 +140,9 @@ output, i.e. wraps final output STR in '```'."
       (format "```\n%s\n```" str))))
 
 (defun standup-notes ()
-    "Generate standup-notes interactively. The user will be
-prompted to enter various information for the previous and
-current work days, and a nicely formatted report will be
+  "Generate standup-notes interactively. The user will be
+prompted to enter various information for the previous,
+current and next work days, and a nicely formatted report will be
 generated in a help buffer."
   (interactive)
   (with-help-window "*standup-notes*"
